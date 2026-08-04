@@ -12,6 +12,14 @@
 
 > 如果之前已经装过这个 skill，直接说「做个桌宠」并拖照片即可，zip 都不用再给。
 
+### 连文件都不用传：从 git 直连安装（推荐分发方式）
+
+把下面这条指令直接发给对方（对方不用接收任何文件），AI 会自己从网上把 skill 下载并装好：
+
+> 「**帮我从这个链接安装桌宠 skill：https://github.com/Mio0707/desktop-pet-creator/releases/latest/download/desktop-pet-creator.zip**」
+
+装好后照常：拖照片 → 说「做个桌宠」→ 双击桌面启动文件。
+
 ## 最省事的做法（推荐，零门槛）
 
 1. **传照片**：在 WorkBuddy 对话里把宠物的照片拖进来，说一句「做个桌宠」。

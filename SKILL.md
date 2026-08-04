@@ -159,7 +159,7 @@ spec 里**只写要改的字段**（比如只给新的 `images`，或只给新�
 - **webp 图**：WPF 原生不支持 webp，能否显示取决于用户系统的 WIC 编解码器。构建环境装有 Pillow 时脚本会自动转 png；否则脚本会照收并在 warnings 里提醒，建议引导用户改用 png/jpg。
 - **想改已生成宠物的台词/名字/图**：优先用 `--base` 增量更新——spec 只写新的字段，其余原样保留；也可以让用户解压后直接改 `config.json` 里对应值再重新压缩。
 - **脚本运行时报 "ok": false**：stdout 的 JSON 里有 error 字段，按提示修 spec 重跑即可，不要绕过脚本手工组装。
-- **用户想"装这个 skill"而不是用**：分发安装不需要用户手动放文件夹。两种方式：(1) 对话代装——让用户把 `desktop-pet-creator.zip`（顶层目录必须是 `desktop-pet-creator/`）拖进 WorkBuddy 对话，说「帮我安装这个桌宠 skill」，AI 自动解压到 `~/.workbuddy/skills/`，新会话即生效；(2) 一键 bat——配合「安装桌宠skill.bat」双击自动解压到 `~/.workbuddy/skills/`。若本机已装过，跳过安装直接说「做个桌宠」。
+- **用户想"装这个 skill"而不是用**：分发安装不需要用户手动放文件夹，三种方式：(1) 对话代装——把 `desktop-pet-creator.zip`（顶层目录 `desktop-pet-creator/`）拖进 WorkBuddy 对话说「帮我安装这个桌宠 skill」，AI 自动解压到 `~/.workbuddy/skills/`；(2) 一键 bat——「安装桌宠skill.bat」双击自动安装；(3) **从 git 下载安装（免拖文件，推荐分发）**——本 skill 公开仓库 `https://github.com/Mio0707/desktop-pet-creator`，zip 直链（`/releases/latest/` 始终指向最新版）：`https://github.com/Mio0707/desktop-pet-creator/releases/latest/download/desktop-pet-creator.zip`。把这条指令给用户即可：**「帮我从这个链接安装桌宠 skill：<直链>」**——AI 自动下载 → 解压到 `~/.workbuddy/skills/` → 安装完成（也可 `git clone https://github.com/Mio0707/desktop-pet-creator.git` 到 `~/.workbuddy/skills/`）。若本机已装过，跳过安装直接说「做个桌宠」。
 
 ## Resources
 
