@@ -1,6 +1,6 @@
 ---
 name: desktop-pet-creator
-description: 把用户提供的图片制作成 Windows 桌面宠物（桌宠）——桌面上一个无边框透明、可拖拽、会随机换图和弹台词气泡的小宠物。面向电脑小白的默认用法：给一张照片即可全自动生成并装到桌面，双击启动文件就能看到宠物，全程无需任何配置、不消耗额外积分。当用户想做桌面宠物、桌宠、电子宠物，或想把某张图片/表情包/自设角色变成桌面上会动会说话的小伙伴时使用。产出是可直接运行的宠物包（zip + 桌面启动器），用户机器上无需安装 Node.js 或任何开发环境。
+description: 把用户提供的图片制作成 Windows 桌面宠物（桌宠）——桌面上一个无边框透明、可拖拽、会随机换图和弹台词气泡的小宠物。默认流程：用户上传一张宠物照片 → AI 派生多个状态图并自动抠图 → 可视化制作台配互动台词 → 一键生成桌面启动程序。当用户想做桌面宠物、桌宠、电子宠物，或想把某张图片/表情包/自设角色变成桌面上会动会说话的小伙伴时使用。产出是可直接运行的宠物包（zip + 桌面启动器），用户机器上无需安装 Node.js 或任何开发环境。
 agent_created: true
 ---
 
@@ -8,65 +8,48 @@ agent_created: true
 
 ## Overview
 
-根据用户上传的一张图片，全自动生成可直接运行的 Windows 桌面宠物，并自动安装到用户桌面。宠物基于 PowerShell + WPF（运行时模板 `assets/windows-pet-template/`），支持四种交互（休息/悬停/点击/双击）、随机台词气泡、拖拽移动、程序动画（待机呼吸、悬停歪头、单击弹跳、双击跳跃），右键或 ESC 关闭。
+根据用户上传的图片生成可直接运行的 Windows 桌面宠物，并自动安装到用户桌面。宠物基于 PowerShell + WPF（运行时模板 `assets/windows-pet-template/`），支持四种交互（休息/悬停/点击/双击）、随机台词气泡、拖拽移动、程序动画（待机呼吸、悬停歪头、单击弹跳、双击跳跃），右键或 ESC 关闭。
+
+默认工作流：**用户给一张真实照片 → AI 派生多状态图（ImageGen，先报积分）→ 自动抠图 → 可视化制作台配台词 → 一键完成并装到桌面 → 双击启动**。
 
 组装由 `scripts/build_pet.py` 确定性完成（复制模板、图片改名、宽高与窗口尺寸计算、生成 config.json、自检、打包；加 `--install` 时额外安装到桌面）。**不要手工拼 config.json 或手工打包**——编码、尺寸公式、zip 目录层级都是易错点，脚本已内建校验，出错会拒建并说明原因。
 
-核心原则：**面向小白，默认零门槛——用户只出一张照片，其余全自动，不问任何配置、不弹任何页面、不消耗额外积分。** 想要更精细（多动作状态 / 自定义每句台词 / 帧动画）再走进阶模式。
+核心原则：**用户只出照片和台词，其余全部代办**。不问技术问题，配置项全部提供默认值，用户说"都行"就直接用默认。
 
-## 两条路径
+## 工作流
 
-先判断用户要哪种：
+先判断**新建还是更新**：用户是"做一个新桌宠"，还是"改之前那个桌宠"（换图/改台词/调大小）？更新时走第 3 步备选的 `--base` 增量构建——用户已有的自定义设置（台词、名字、休息间隔、旧状态图）全部保留，不要从零重做。
 
-- **零门槛模式（默认，电脑小白首选）**：一张照片 → 全自动出宠并装到桌面 → 双击启动。不问配置、不弹制作台、不派生多状态、零额外积分。
-- **进阶自定义模式**：用户明确要多个动作状态、自己配每句互动台词、做帧序列动画，或点名要可视化制作台时走这条。
+### 第 1 步：收集图片和派生状态图（默认：AI 多状态）
 
-## 零门槛模式（默认路径）
+用户给至少 1 张照片。默认用 `references/pet-state-prompts.md` 的提示词模板做 ImageGen 图生图，把真实照片派生为多个状态图：
 
-目标：用户只做两件事——**拖一张照片 + 说"做个桌宠"**，然后**双击桌面的启动文件**。中间全部自动。
+- 默认状态组 idle/rest/curious/happy/excited/wave；预算有限可只做 idle/rest/happy/wave 4 张基础款。
+- **先报生成张数和预估积分（每张约 5-10），用户同意后再生成**；先出 idle 与用户确认风格和相似度，满意后再批量出其余状态。
+- 逐张过目，身份漂移大或构图不统一的单张重试，不要不确认就整批用掉；生成图带背景时用 `scripts/remove_bg.py` 抠图（纯色背景免费抠）或 ImageGen 直接出透明版。
+- **用户明确只要一张原图（不派生）**：尊重用户，直接把原图作为 idle，其余状态复用同一张图（build_pet.py 自动处理，宠物照样能跑能说话）。
+- 状态名规则：唯一、≤32 字符、空白替换为 `_`；`idle` 必须存在。图片支持 png/jpg/webp/gif。
+- **一个状态想要连播动画（GIF 效果）**：对该状态生成 2~4 张连续画面（提示词保持构图一致，只改姿势/进度，如挥手的第 1/2/3 帧），在 spec.images 里把该状态写成「图片路径列表」，build_pet.py 自动产出 `frames` 配置，运行时进入该状态即按 fps 连播；其余状态仍可用程序动画（呼吸/弹跳）。每张帧都是一次 ImageGen 调用，积分成本随帧数上升，建议只对 1~2 个招牌状态（如 wave/happy）做帧序列。
 
-1. **取照片**：用户拖入一张宠物照片即触发。若一次拖了多张，默认用最近拖入的那张（用 Glob 按修改时间找最新的 `**/*.png`/`**/*.jpg`/`**/*.jpeg`/`**/*.webp`/`**/*.gif`）；用户没给图就先请他把图片拖进对话。
-2. **全自动构建**：写一份最简 build-spec.json（只给 idle 图，其余全默认），用 managed Python 跑：
+找图技巧：用 Glob 按 `**/*.png`、`**/*.jpg`、`**/*.jpeg`、`**/*.webp`、`**/*.gif` 在工作区搜索，按修改时间排序，最近拖入的图排在最前；找不到就明确问用户图片路径。
 
-```bash
-"C:\Users\goodfather02\.workbuddy\binaries\python\versions\3.13.12\python.exe" \
-  "C:\Users\goodfather02\.workbuddy\skills\desktop-pet-creator\scripts\build_pet.py" \
-  --spec "<workspace>\build-spec.json" --workspace "<workspace>" --install
-```
+### 第 2 步：确认配置（给默认值，少打扰）
 
-最简 spec 示例：
+用 AskUserQuestion 一次性向用户确认，把"全部默认（推荐）"放第一个选项，用户也可以回复"默认"跳过：
 
-```json
-{
-  "petName": "我的桌面宠物",
-  "images": { "idle": "照片绝对路径" },
-  "bubbleText": "你好呀！",
-  "restMinutes": 8
-}
-```
+| 配置 | 默认 |
+|------|------|
+| 宠物名字 | 我的桌面宠物 |
+| 宽×高 | 脚本按 idle 图实际比例自动计算（长边 150px），用户指定才覆盖 |
+| 休息换图间隔 | 8 分钟 |
+| 气泡 | 开启，兜底台词"你好呀！" |
+| 四种交互的随机台词 | 用 `references/config-schema.md` 里的默认互动表 |
 
-`--install` 会让脚本一次性完成：构建 zip → 安装到 `~/DesktopPets/<宠物名>/` → 在桌面生成 `<宠物名>-桌宠.bat`（GBK/mbcs 编码，中文路径不乱码）。stdout 返回一行 JSON，含 `installDir`、`launcher`、`launcherName`；`"ok": false` 时按 `error` 修 spec 重跑。
+用户有自定义台词（比如"点击时随机说 xx 或 yy"）就写进 spec 的 interactions，只需给出要覆盖的触发，没给的触发自动用默认。
 
-3. **零打断原则**：本模式**不要**调用 AskUserQuestion、**不要**启动 maker_server、**不要**逐张确认图、**不要**调用 ImageGen。名字/尺寸/间隔/气泡/四种互动台词全部走默认（默认互动表见 `references/config-schema.md`）。被引用的状态若没有单独图，脚本自动复用 idle 并给 warning，宠物照样能跑能说话。
-4. **交付**：一句话告诉用户——**双击桌面上的「<宠物名>-桌宠.bat」就能看到宠物；拖拽可移动，右键或按 ESC 关闭**。可顺手把返回的 zip 用 present_files 给用户留作备份。
-   - 宠物只能在 Windows 运行；若双击后 Windows 提示是否允许运行脚本，选「允许」（启动后无黑窗口）。
-   - **不要代用户启动**——沙箱内 GUI 进程窗口到不了用户桌面（历史实测 Bash/PowerShell 启动均被拦或不可见），让用户自己双击是唯一可靠路径。
-5. **关于背景**：照片若带复杂背景，宠物会连同背景一起显示在桌面（矩形块）。零门槛模式不自动抠图（避免额外积分 / AI 调用）。用户想透明背景时再说一句「帮我把背景去掉」，再按进阶模式处理：纯色背景用 `scripts/remove_bg.py` 免费抠；复杂背景可用 ImageGen 重生成透明版，需先告知积分成本并征得同意。
+### 第 3 步：制作（方式一：可视化制作台，默认）
 
-## 进阶自定义模式（可选）
-
-用户明确要更生动或更可控时启用。
-
-### 收集图片与状态
-
-- 至少 1 张 idle 图；多张时与用户确认状态名（idle/rest/curious/happy/excited/wave/talk/sleep…，可中文，≤32 字符，空白转 `_`，`idle` 必存在）。图片支持 png/jpg/webp/gif。
-- 只有 1 张：作为 idle，其余状态复用它。
-- **AI 派生多状态（可选增强）**：用户只有 1 张真实照片但想要多动作时，用 `references/pet-state-prompts.md` 的提示词模板做 ImageGen 图生图。先报张数与预估积分（每张约 5-10），用户同意后再生成；先出 idle 确认风格与相似度，再批量其余；逐张过目，身份漂移大或构图不统一的单张重试。状态图就位后照常构建；状态与 interactions 的映射按 references 推荐表。
-- **帧序列动画（GIF 效果）**：对某状态生成 2~4 张连续画面（提示词保持构图一致，只改姿势/进度），在 spec.images 里把该状态写成「图片路径列表」，build_pet.py 自动产出 `frames` 配置，运行时进入该状态即按 fps 连播；其余状态仍可用程序动画。每张帧都是一次 ImageGen 调用，积分成本随帧数上升，建议只对 1~2 个招牌状态（如 wave/happy）做。
-
-### 可视化制作台（方式一，推荐给想自己调的人）
-
-图片（含抠图）就位后，启动 `scripts/maker_server.py` 给用户一个制作页面：
+图片（含抠图）全部就位后，启动 `scripts/maker_server.py` 给用户一个可视化制作页面：
 
 1. 在工作区写 `maker-config.json`：
 
@@ -92,12 +75,12 @@ interactions 预填值按 `references/pet-state-prompts.md` 的推荐映射和�
 ```
 
 3. 用 present_files 把 MAKER_URL 给用户（内置浏览器直接打开）。页面上：状态图画廊（透明底）+ 四个触发的「状态+台词」行编辑 + 名字/兜底台词/间隔。
-4. 用户点「完成制作」→ 服务端自动：跑 build_pet.py 出 zip → 安装到 `~/DesktopPets/<宠物名>/` → 在桌面生成 `<宠物名>-桌宠.bat`。
-5. 告诉用户：**双击桌面的启动程序召唤宠物**（右键宠物或 ESC 关闭）。
+4. 用户点「完成制作」→ 服务端自动：跑 build_pet.py 出 zip → 安装到 `~/DesktopPets/<宠物名>/` → 在桌面生成 `<宠物名>-桌宠.bat`（GBK/mbcs 编码，中文路径不乱码）。
+5. 告诉用户：**双击桌面的启动程序召唤宠物**（右键宠物或 ESC 关闭）。不要试图代用户启动——沙箱内启动的 GUI 进程窗口到不了用户桌面（实测 Bash 后台 / PowerShell Start-Process 均被拦或不可见），让用户自己双击是唯一可靠路径。
 
-### 纯对话制作（方式二）
+### 第 3 步备选：纯对话制作（方式二）
 
-用户不想开页面时，按最简 spec 写 build-spec.json 跑脚本（加不加 `--install` 都行，加则自动装桌面）：
+用户不想开页面时，按第 2 步的对话确认收集配置，然后写 build-spec.json 跑脚本：
 
 ```json
 {
@@ -120,13 +103,27 @@ interactions 预填值按 `references/pet-state-prompts.md` 的推荐映射和�
 - `width`/`height` 省略时脚本按 idle 图比例自动算；只给一个时另一个按比例推。
 - `interactions` 省略则用默认互动表；只写要覆盖的触发（rest/hover/click/doubleClick）即可。
 - interactions 引用了没有图的状态名时，脚本自动让它复用 idle 的图并给出 warning。
-- 所有字段都可省。省略时取值顺序：**spec 显式写的 > `--base` 旧配置里的值 > 默认值**。
+- 所有字段都可省。省略时的取值顺序：**spec 显式写的 > `--base` 旧配置里的值 > 默认值**。
+- 加 `--install` 会额外完成：构建 zip → 安装到 `~/DesktopPets/<宠物名>/` → 在桌面生成 `<宠物名>-桌宠.bat`（对话全自动出宠时推荐加）。
 
-用 managed Python 运行（stdout 一行 JSON）：`"ok": true` → zip 已生成在 `<workspace>/<宠物名>-desktop-pet.zip`；`"ok": false` → 按 `error` 修 spec 重跑。
+用 managed Python 运行（stdout 是一行 JSON 结果）：
 
-### 更新已有桌宠（--base，两个模式通用）
+```bash
+"C:\Users\goodfather02\.workbuddy\binaries\python\versions\3.13.12\python.exe" \
+  "C:\Users\goodfather02\.workbuddy\skills\desktop-pet-creator\scripts\build_pet.py" \
+  --spec "<workspace>\build-spec.json" --workspace "<workspace>" --install
+```
+
+- 输出 `"ok": true` → zip 已生成在 `<workspace>/<宠物名>-desktop-pet.zip`；`installDir`/`launcher`/`launcherName` 给出安装路径与桌面启动器。检查 `warnings` 数组，把值得用户知道的提醒（如自动算的宽高、webp 回退）转告用户。
+- 输出 `"ok": false` → 按 `error` 修 spec 重跑。常见原因：图片路径错、缺 idle、状态名重名、扩展名不支持。
+
+#### 更新已有桌宠（--base，保留用户设置）
 
 用户想改之前的桌宠（换图、调大小、加/改台词）而不是从头做时：
+
+1. 找旧包：若是本 skill 之前生成的，先看 `<workspace>/desktop-pet-build/desktop-pet/config.json` 是否还在；否则请用户提供之前的 zip 或解压目录。
+2. spec 里**只写要改的字段**（比如只给新的 `images`，或只给新的 `interactions.click`）。
+3. 运行命令追加 `--base`（同样可加 `--install` 覆盖更新安装目录与桌面启动程序）：
 
 ```bash
 "C:\Users\goodfather02\.workbuddy\binaries\python\versions\3.13.12\python.exe" \
@@ -135,9 +132,15 @@ interactions 预填值按 `references/pet-state-prompts.md` 的推荐映射和�
   --base "<旧 config.json / 旧解压目录 / 旧 zip 路径>" --install
 ```
 
-spec 里**只写要改的字段**（比如只给新的 `images`，或只给新的 `interactions.click`），其余全保留：名字、台词、间隔、宽高、旧图。加 `--install` 会覆盖更新安装目录与桌面启动程序。
+4. 没写的字段全部保留旧值：宠物名字、四种交互台词、休息间隔、气泡开关与兜底台词、宽高；`spec.images` 没给新图的状态继续沿用旧图（旧 zip 里的图也能直接复用，无需用户重新提供）。
 
-## 交付前自检
+### 第 4 步：交付与验收
+
+- 用 present_files 把 zip 呈现给用户，并简要说明：解压 → 双击 start-pet.bat → 右键/ESC 关闭（若走了 `--install`，桌面已有启动文件，直接双击即可）。
+- 主动提醒：宠物只能在 Windows 上运行；若 Windows 拦截脚本提示，选"允许"。
+- 如果当前就是 Windows 且用户想立即看效果，征得同意后可以直接后台运行构建目录（JSON 结果里的 `build_dir`）里的 `start-pet.bat` 让用户预览，提示用户右键宠物即可关闭。
+
+### 交付前自检
 
 脚本已自动强制校验以下各项（不通过会拒建并报错）：
 
@@ -155,6 +158,7 @@ spec 里**只写要改的字段**（比如只给新的 `images`，或只给新�
 ## 常见问题
 
 - **用户只给一句话没带图**：先答"可以，把图片拖进来就能做"，不要空跑流程。
+- **用户只想用一张原图、不派生多状态**：尊重用户，原图作 idle，其余状态复用（脚本自动处理，宠物同样能跑能说话）；想省积分也可以这么干。
 - **gif 图**：可以收，但 WPF 只显示第一帧静态图，提前告知用户。
 - **webp 图**：WPF 原生不支持 webp，能否显示取决于用户系统的 WIC 编解码器。构建环境装有 Pillow 时脚本会自动转 png；否则脚本会照收并在 warnings 里提醒，建议引导用户改用 png/jpg。
 - **想改已生成宠物的台词/名字/图**：优先用 `--base` 增量更新——spec 只写新的字段，其余原样保留；也可以让用户解压后直接改 `config.json` 里对应值再重新压缩。
