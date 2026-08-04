@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桌宠制作台</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #f5f6f8; color: #2c2c2a; padding: 24px; }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .sub { color: #888780; font-size: 13px; margin-bottom: 20px; }
+  .card { background: #fff; border: 1px solid #e6e5e0; border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 15px; font-weight: 500; margin-bottom: 14px; }
+  .gallery { display: flex; flex-wrap: wrap; gap: 12px; }
+  .state-card { width: 132px; text-align: center; }
+  .state-card .img-box { width: 132px; height: 132px; border-radius: 10px; border: 1px solid #e6e5e0;
+    background: repeating-conic-gradient(#f0efeb 0% 25%, #ffffff 0% 50%) 0 0 / 20px 20px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .state-card img { max-width: 120px; max-height: 120px; }
+  .filmstrip { display: flex; gap: 3px; align-items: center; justify-content: center; max-width: 124px; flex-wrap: wrap; }
+  .filmstrip img { width: 36px; height: 36px; object-fit: contain; border-radius: 6px; border: 1px solid #eee; }
+  .state-card .name { margin-top: 6px; font-size: 13px; color: #5f5e5a; }
+  .trigger { border: 1px solid #e6e5e0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .trigger-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+  .trigger-head .t-name { font-size: 14px; font-weight: 500; }
+  .trigger-head .t-desc { font-size: 12px; color: #888780; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .row select { width: 130px; padding: 7px 8px; border: 1px solid #d3d1c7; border-radius: 8px; font-size: 13px; background: #fff; }
+  .row input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid #d3d1c7; border-radius: 8px; font-size: 13px; }
+  .row .del { width: 28px; height: 28px; border: none; background: #f1efe8; border-radius: 8px; cursor: pointer; color: #888780; font-size: 14px; }
+  .row .del:hover { background: #fcebeb; color: #a32d2d; }
+  .add-row { border: 1px dashed #b4b2a9; background: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; color: #5f5e5a; cursor: pointer; }
+  .add-row:hover { border-color: #534AB7; color: #534AB7; }
+  .form-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: #888780; }
+  .field input { padding: 8px 10px; border: 1px solid #d3d1c7; border-radius: 8px; font-size: 13px; width: 200px; }
+  .actions { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  #build-btn { background: #534AB7; color: #fff; border: none; border-radius: 10px; padding: 12px 28px; font-size: 15px; cursor: pointer; }
+  #build-btn:hover { background: #3C3489; }
+  #build-btn:disabled { background: #b4b2a9; cursor: not-allowed; }
+  #status { font-size: 13px; color: #888780; }
+  .banner { display: none; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; font-size: 14px; line-height: 1.8; }
+  .banner.ok { display: block; background: #e1f5ee; border: 1px solid #9fe1cb; color: #0f6e56; }
+  .banner.err { display: block; background: #fcebeb; border: 1px solid #f09595; color: #a32d2d; }
+  .banner code { background: rgba(255,255,255,.7); padding: 1px 6px; border-radius: 6px; font-size: 12px; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>桌宠制作台</h1>
+  <div class="sub">状态图已生成并抠好透明背景（同一状态有多张图的会以「帧序列」连播成小动画），确认交互绑定和台词，点「完成制作」即可在桌面生成启动程序。</div>
+
+  <div id="banner" class="banner"></div>
+
+  <div class="card">
+    <h2>状态图（透明背景）</h2>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <div class="card">
+    <h2>交互与台词</h2>
+    <div id="triggers"></div>
+  </div>
+
+  <div class="card">
+    <h2>基本设置</h2>
+    <div class="form-grid">
+      <div class="field"><label>宠物名字</label><input id="pet-name" type="text" maxlength="40"></div>
+      <div class="field"><label>兜底台词（气泡默认显示）</label><input id="bubble-text" type="text" maxlength="120"></div>
+      <div class="field"><label>休息换图间隔（分钟）</label><input id="rest-minutes" type="text" inputmode="numeric" style="width:100px"></div>
+    </div>
+    <div class="actions" style="margin-top:18px">
+      <button id="build-btn">完成制作</button>
+      <span id="status"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+const STATES = __STATES_JSON__;
+const DEFAULTS = __DEFAULTS_JSON__;
+const TOKEN = "__TOKEN__";
+const TRIGGERS = [
+  { key: "rest", name: "休息轮换", desc: "不碰它的时候，每隔一会儿随机出现" },
+  { key: "hover", name: "鼠标悬停", desc: "鼠标移到宠物身上时触发" },
+  { key: "click", name: "单击", desc: "单击宠物时触发" },
+  { key: "doubleClick", name: "双击", desc: "双击宠物时触发" }
+];
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function renderGallery() {
+  const g = document.getElementById("gallery");
+  STATES.forEach(s => {
+    const card = el("div", "state-card");
+    const box = el("div", "img-box");
+    if (s.frames.length === 1) {
+      const img = document.createElement("img");
+      img.src = s.frames[0]; img.alt = s.name;
+      box.appendChild(img);
+    } else {
+      const strip = el("div", "filmstrip");
+      s.frames.forEach(f => {
+        const img = document.createElement("img");
+        img.src = f; img.alt = s.name;
+        strip.appendChild(img);
+      });
+      box.appendChild(strip);
+    }
+    card.appendChild(box);
+    card.appendChild(el("div", "name", s.name + (s.frames.length > 1 ? "（" + s.frames.length + " 帧）" : "")));
+    g.appendChild(card);
+  });
+}
+
+function stateSelect(value) {
+  const sel = document.createElement("select");
+  STATES.forEach(s => {
+    const o = document.createElement("option");
+    o.value = s.name; o.textContent = s.name;
+    sel.appendChild(o);
+  });
+  if (value) sel.value = value;
+  return sel;
+}
+
+function makeRow(triggerKey, action, text) {
+  const row = el("div", "row");
+  row.dataset.trigger = triggerKey;
+  row.appendChild(stateSelect(action));
+  const input = document.createElement("input");
+  input.type = "text"; input.placeholder = "台词（可留空）"; input.maxLength = 120;
+  input.value = text || "";
+  row.appendChild(input);
+  const del = el("button", "del", "×");
+  del.title = "删除这一行";
+  del.onclick = () => row.remove();
+  row.appendChild(del);
+  return row;
+}
+
+function renderTriggers() {
+  const host = document.getElementById("triggers");
+  TRIGGERS.forEach(t => {
+    const box = el("div", "trigger");
+    const head = el("div", "trigger-head");
+    head.appendChild(el("span", "t-name", t.name));
+    head.appendChild(el("span", "t-desc", t.desc + "；每行是一条，多条时随机抽取"));
+    box.appendChild(head);
+    const rows = el("div", "rows");
+    (DEFAULTS.interactions[t.key] || []).forEach(r => rows.appendChild(makeRow(t.key, r.action, r.text)));
+    box.appendChild(rows);
+    const add = el("button", "add-row", "+ 添加一行");
+    add.onclick = () => rows.appendChild(makeRow(t.key, STATES[0].name, ""));
+    box.appendChild(add);
+    host.appendChild(box);
+  });
+}
+
+function collect() {
+  const interactions = {};
+  let err = null;
+  TRIGGERS.forEach(t => {
+    const rows = [];
+    document.querySelectorAll('.row[data-trigger="' + t.key + '"]').forEach(r => {
+      rows.push({ action: r.querySelector("select").value, text: r.querySelector("input").value.trim() });
+    });
+    if (rows.length === 0) err = "「" + t.name + "」至少需要一行";
+    interactions[t.key] = rows;
+  });
+  const petName = document.getElementById("pet-name").value.trim();
+  if (!petName) err = "宠物名字不能为空";
+  const restMinutes = parseFloat(document.getElementById("rest-minutes").value);
+  if (!(restMinutes >= 1 && restMinutes <= 240)) err = "休息间隔需为 1-240 的数字";
+  return { err, payload: {
+    petName,
+    bubbleText: document.getElementById("bubble-text").value,
+    restMinutes,
+    interactions
+  }};
+}
+
+async function build() {
+  const { err, payload } = collect();
+  const banner = document.getElementById("banner");
+  banner.className = "banner";
+  if (err) { banner.className = "banner err"; banner.textContent = err; return; }
+  const btn = document.getElementById("build-btn");
+  const status = document.getElementById("status");
+  btn.disabled = true; status.textContent = "制作中……";
+  try {
+    const resp = await fetch("/build?token=" + encodeURIComponent(TOKEN), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await resp.json();
+    if (data.ok) {
+      banner.className = "banner ok";
+      banner.innerHTML = "制作完成！桌面已生成启动程序 <code>" + data.launcherName + "</code>，双击它就能召唤宠物（右键宠物或按 ESC 关闭）。<br>" +
+        "桌宠包：<code>" + data.zip + "</code><br>安装目录：<code>" + data.installDir + "</code>" +
+        (data.warnings && data.warnings.length ? "<br>提醒：" + data.warnings.join("；") : "");
+      status.textContent = "";
+    } else {
+      banner.className = "banner err";
+      banner.textContent = "制作失败：" + (data.error || "未知错误");
+      status.textContent = "";
+    }
+  } catch (e) {
+    banner.className = "banner err";
+    banner.textContent = "请求失败：" + e;
+    status.textContent = "";
+  }
+  btn.disabled = false;
+}
+
+document.getElementById("pet-name").value = DEFAULTS.petName;
+document.getElementById("bubble-text").value = DEFAULTS.bubbleText;
+document.getElementById("rest-minutes").value = DEFAULTS.restMinutes;
+renderGallery();
+renderTriggers();
+document.getElementById("build-btn").onclick = build;
+</script>
+</body>
+</html>

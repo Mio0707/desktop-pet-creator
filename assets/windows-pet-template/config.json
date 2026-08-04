@@ -1,0 +1,71 @@
+{
+  "petName": "桌面宠物",
+  "width": 120,
+  "height": 140,
+  "windowWidth": 220,
+  "windowHeight": 240,
+  "defaultAction": "idle",
+  "hoverAction": "wave",
+  "clickAction": "happy",
+  "doubleClickAction": "talk",
+  "restAction": "rest",
+  "bubbleEnabled": true,
+  "bubbleText": "你好呀！",
+  "bubblePosition": "top",
+  "restDelayMs": 480000,
+  "actionDurationMs": 1100,
+  "bubbleDisplayMs": 3000,
+  "alwaysOnTop": true,
+  "draggable": true,
+  "actions": {
+    "idle": "assets/idle.png",
+    "rest": "assets/idle.png",
+    "wave": "assets/idle.png",
+    "happy": "assets/idle.png",
+    "talk": "assets/idle.png",
+    "sad": "assets/idle.png"
+  },
+  "interactions": {
+    "rest": [
+      {
+        "action": "rest",
+        "text": "我休息一下～"
+      },
+      {
+        "action": "idle",
+        "text": "发会儿呆。"
+      }
+    ],
+    "hover": [
+      {
+        "action": "wave",
+        "text": "嗨！"
+      },
+      {
+        "action": "talk",
+        "text": "找我玩吗？"
+      }
+    ],
+    "click": [
+      {
+        "action": "happy",
+        "text": "嘿嘿！"
+      },
+      {
+        "action": "wave",
+        "text": "我在这里！"
+      }
+    ],
+    "doubleClick": [
+      {
+        "action": "talk",
+        "text": "你双击我啦！"
+      },
+      {
+        "action": "happy",
+        "text": "今天也要开心！"
+      }
+    ]
+  },
+  "idleAfterInteractionMs": 60000
+}
